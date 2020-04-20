@@ -1,6 +1,6 @@
 #!/bin/bash
 
-cd minikube-kafka-cluster
+cd minikube-kafka
 kubectl apply -f 00-namespace/
 kubectl apply -f 01-zookeeper/
 kubectl apply -f 02-kafka/
