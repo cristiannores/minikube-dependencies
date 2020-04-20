@@ -1,0 +1,102 @@
+apiVersion: apps/v1 
+kind: StatefulSet
+metadata:
+  name: queue-node
+spec:
+  selector:
+    matchLabels:
+      app: nats
+  serviceName: "nats-service"
+  replicas: 3
+  template:
+    metadata:
+      labels:
+        app: nats
+    spec:
+      volumes:
+        - name: queue-node-config-gen
+          configMap:
+            name: queue-node-config-gen
+            defaultMode: 0777
+        - name: queue-config-storage
+          emptyDir: {}
+      terminationGracePeriodSeconds: 3
+      initContainers:
+      - name: init-nats-server
+        image: busybox
+        command: ["sh", "-c", "/base/config_generator.sh"]
+        volumeMounts:
+        - name: queue-node-config-gen
+          mountPath: /base
+        - name: queue-config-storage
+          mountPath: /config
+      containers:
+        - name: nats-streaming
+          image: nats-streaming:0.15.1
+          ports:
+            - containerPort: 4222
+              name: nats-clients
+            - containerPort: 8222
+              name: nats-monitor
+            - containerPort: 6222
+              name: nast-cluster
+          args:
+            - --stan_config=/config/node.conf
+          livenessProbe:
+            httpGet:
+              path: "/"
+              port: 8222
+            initialDelaySeconds: 3
+            periodSeconds: 5
+          readinessProbe:
+            httpGet:
+              path: "/"
+              port: 8222
+            initialDelaySeconds: 3
+            periodSeconds: 5
+          resources:
+            requests:
+              cpu: 10m
+              memory: 128Mi
+            limits:
+              cpu: 50m
+              memory: 256Mi
+          volumeMounts:
+            - name: queue-store
+              mountPath: /store
+            - name: queue-config-storage
+              mountPath: /config
+        - name: nats-exporter
+          image: synadia/prometheus-nats-exporter:0.4.0
+          ports:
+            - containerPort: 7777
+              name: nats-exporter
+          env:
+          - name: POD_NAME
+            valueFrom:
+              fieldRef:
+                fieldPath: metadata.name
+          args:
+            - -varz
+            - -connz
+            - -routez
+            - -subz
+            - -channelz
+            - -serverz
+            - -DV
+            - $(POD_NAME),http://0.0.0.0:8222
+          resources:
+            requests:
+              cpu: 5m
+              memory: 16Mi
+            limits:
+              cpu: 30m
+              memory: 32Mi
+  volumeClaimTemplates:
+  - metadata:
+      name: queue-store
+    spec:
+      accessModes: [ "ReadWriteOnce" ]
+      resources:
+        requests:
+          storage: 100Mi

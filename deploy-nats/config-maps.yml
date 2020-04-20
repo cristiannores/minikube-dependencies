@@ -1,0 +1,52 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: queue-node-config-gen
+data:
+  config_generator.sh: |+2
+
+    CLUSTER_NAME=omsgr-cluster
+    SERVICE_NAME=nats-service
+    NODE_PREFIX=""
+    CONFIG_FILE=/config/node.conf
+
+    POD_NAME_NUMBER=$(echo ${HOSTNAME} | cut -d '-' -f 3);
+    POD_NAME_PREFIX=$(echo ${HOSTNAME} | cut -d '-' -f 1-2);
+
+    for ELEMENT in '0' '1' '2'; do
+      if [ $POD_NAME_NUMBER != $ELEMENT ]; then
+        CLUSTER_PEERS=${CLUSTER_PEERS}"${POD_NAME_PREFIX}-${ELEMENT},";
+        CLUSTER_ROUTES=${CLUSTER_ROUTES}"nats://${POD_NAME_PREFIX}-${ELEMENT}.${SERVICE_NAME}:6222,";
+      fi;
+    done;
+    CLUSTER_PEERS="${CLUSTER_PEERS%?}";
+    CLUSTER_ROUTES="${CLUSTER_ROUTES%?}";
+
+    touch $CONFIG_FILE;
+    cat > $CONFIG_FILE << EOF
+
+    port: 4222
+    http_port: 8222
+    cluster: {
+      listen: 0.0.0.0:6222
+      routes: [${CLUSTER_ROUTES}]
+    }
+    streaming:{
+      id: $CLUSTER_NAME
+      store: file
+      dir: /store
+      cluster: {
+        node_id: "$NODE_PREFIX${HOSTNAME}"
+        peers: [${CLUSTER_PEERS}]
+        log_path: "/store/logs/${HOSTNAME}"
+      }
+      store_limits: {
+        max_channels: 30
+        max_subs: 300
+        max_age: 36h
+      }
+    }
+
+    EOF
+
+    cat $CONFIG_FILE;

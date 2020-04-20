@@ -1,0 +1,63 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: kafdrop
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: kafdrop
+  template:
+    metadata:
+        labels:
+          app: kafdrop
+    spec:
+      containers:
+        - name: kafdrop
+          image: obsidiandynamics/kafdrop:latest
+          imagePullPolicy: Always
+          env:
+          - name: KAFKA_BROKERCONNECT
+            value: "kafka-0.kafka.kafka-ca1.svc.cluster.local:9092,kafka-0.kafka.kafka-ca1.svc.cluster.local:9092,kafka-0.kafka.kafka-ca1.svc.cluster.local:9092"
+          - name: KAFKA_PROPERTIES
+            value: "kafka.properties"
+          - name: KAFKA_TRUSTSTORE
+            value: "kafka.truststore.jks"
+          - name: KAFKA_KEYSTORE
+            value: "kafka.keystore.jks"
+          - name: JVM_OPTS
+            value: ""
+          - name: JMX_PORT
+            value: "8686"
+          - name: HOST
+            value: ""
+          - name: SERVER_SERVLET_CONTEXTPATH
+            value: ""
+          - name: KAFKA_PROPERTIES_FILE
+            value: ""
+          - name: KAFKA_TRUSTSTORE_FILE
+            value: ""
+          - name: KAFKA_KEYSTORE_FILE
+            value: ""
+          - name: SERVER_PORT
+            value: "9000"
+          - name: CMD_ARGS
+            value: ""
+          ports:
+            - name: http
+              containerPort: 9000
+              protocol: TCP
+          livenessProbe:
+            httpGet:
+              path: "/actuator/health"
+              port: http
+            initialDelaySeconds: 180
+            periodSeconds: 30
+            timeoutSeconds: 10
+          readinessProbe:
+            httpGet:
+              path: "/actuator/health"
+              port: http
+            initialDelaySeconds: 20
+            periodSeconds: 5
+            timeoutSeconds: 10
