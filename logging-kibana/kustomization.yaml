@@ -1,0 +1,14 @@
+# Override the namespace of all of the resources we manage.
+namespace: logging
+
+
+resources:
+  # A namespace to keep the resources at.
+  - elastic.yaml
+  - fluentd-daemonset.yaml
+  - fluentd-rbac.yaml
+  - fluentd-kibana.yaml
+
+generatorOptions:
+  # We do not want a suffix at the `ConfigMap` name.
+  disableNameSuffixHash: true

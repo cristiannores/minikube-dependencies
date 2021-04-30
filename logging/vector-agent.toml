@@ -1,0 +1,21 @@
+# The Vector Kubernetes integration automatically defines a
+# `kubernetes_logs` source that is made available to you.
+# You do not need to define a log source.
+
+[sources.my_source_id]
+  type = "kubernetes_logs" # re
+
+# Vector's API for introspection
+[api]
+enabled = true
+address = "127.0.0.1:8686"
+playground = true
+
+# --> Add transforms here to parse, enrich, and process data
+
+# print all events, replace this with your desired sink(s)
+# https://vector.dev/docs/reference/sinks/
+[sinks.out]
+type = "console"
+inputs = [ "kubernetes_logs" ]
+encoding.codec = "json"
